@@ -20,7 +20,7 @@ BelZSpeedScan is a lightweight and easy-to-use library for scanning QR codes and
 # Demonstrations
 | Android 
 |---------|
-| ![Scanner](https://github.com/ismoy/DemoBelZSpeedScan/blob/resources/demoCamera_compressed.gif)
+| ![Scanner](https://github.com/ismoy/DemoBelzSpeedScan/blob/main/demoCamera_compressed.gif)
 
 ## Installation
 
