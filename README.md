@@ -110,10 +110,10 @@ fun CameraManagerUtils(
         descriptionDialogDenied = "You need to grant camera permission to scan QR codes",
         btnDialogDenied = "Grant Permission",
         customDeniedDialog = {
-            //Your custom dialog
+            //Your compose custom dialog
         },
         customSettingsDialog = {
-            //Your custom dialog
+            //Your compose custom dialog
         }
     ) {granted-> 
         println("CameraManagerUtils: $granted")
