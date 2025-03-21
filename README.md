@@ -39,15 +39,6 @@ dependencies {
     }
     // ... other dependencies
 }
-//Your Info.plist add this permission
-<key>NSCameraUsageDescription</key>
-    <string>Necesitamos acceso a la cámara para escanear códigos QR y códigos de barras</string>
-    <key>UIBackgroundModes</key>
-    <array>
-        <string>audio</string>
-    </array>
-//go to src/iosMain create a package /resources
-//src/iosMain/resources/resourename.mp3
 ```
 ## Android Native
 For native Android development, include the dependency in your module's build.gradle file:
@@ -63,26 +54,41 @@ dependencies {
 ```
 ## How to Use
 The core functionality of BelZSpeedScan is accessed through the App function (or similar entry point in your KMP project).  This function requires a context parameter, which in Android would typically be your MainActivity's context.
-# Use in your KMP and Android project
+# Use in your KMP
+#### App.kt
 ```kotlin
 import io.github.ismoy.belzspeedscan.domain.CodeScanner // Import CodeScanner
 import androidx.compose.runtime.*
 import androidx.compose.ui.platform.LocalLifecycleOwner
-// ... other imports
 fun App(context: Any? = null) {
 CameraScreen(context)
 }
-// composeApp/androidMain/MainActivity
+```
+### composeApp/src/androidMain/MainActivity.kt
+```kotlin
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
         setContent {
-            App(this.applicationContext)
+            App(this)
         }
     }
 }
-// create CameraManagerUtil
+```
+### composeApp/src/iosApp/iosApp/Info.plist
+```xml
+<key>NSCameraUsageDescription</key>
+    <string>Necesitamos acceso a la cámara para escanear códigos QR y códigos de barras</string>
+    <key>UIBackgroundModes</key>
+
+    <array>
+        <string>audio</string>
+    </array>
+```
+### Create this resource composeApp/src/iosMain/resources/beep.mp3
+### Create CameraManager function
+```kotlin
+@Composable
 fun CameraManagerUtils(
     context: Any?,
     onCodeScanned: (String) -> Unit
@@ -96,27 +102,9 @@ fun CameraManagerUtils(
             scanner?.stopScanning()
         }
     }
-    // Default request camera dialog
+
     RequestCameraPermission { granted ->
         hasCameraPermission = granted
-    }
-       OR
-// Custom Dialog Permission
- RequestCameraPermission(
-        titleDialogConfig = "Your app needs camera permission",
-        descriptionDialogConfig = "Your app needs camera permission to scan QR codes",
-        btnDialogConfig = "Open Settings",
-        titleDialogDenied = "Camera permission denied",
-        descriptionDialogDenied = "You need to grant camera permission to scan QR codes",
-        btnDialogDenied = "Grant Permission",
-        customDeniedDialog = {
-            //Your compose custom dialog
-        },
-        customSettingsDialog = {
-            //Your compose custom dialog
-        }
-    ) {granted-> 
-        println("CameraManagerUtils: $granted")
     }
 
     Scaffold(
@@ -136,9 +124,116 @@ fun CameraManagerUtils(
                                     lifecycleOwner = lifecycleOwner,
                                     previewView = preview,
                                     playSound = true,
-                                    resourceName = "resourename"//your resource name only for emit a scan beep in IOS,
-                                    resourceExtension = "mp3"//your extension recommended mp3,
-                                    delayToNextScan = 3000,
+                                    resourceName = "beep",// Is required the resource name to emit a scan beep in IOS
+                                    resourceExtension = "mp3",// Is required the resource extension to emit a scan beep in IOS
+                                    delayToNextScan = 2000,// The waiting time for the next scan can be changed 
+                                    onCodeScanned = { scannedText ->
+                                    // Scan result
+                                        onCodeScanned(scannedText)
+                                    }
+                                ).also {
+                                    it.startScanning()
+                                }
+                            },
+                            scanner = currentScanner,
+                            modifier = Modifier.fillMaxHeight(1F),
+                            tooFarText = "",// Put your UX message or use the default message
+                            tooOptimalText = "",// Put your UX message or use the default message
+                        )
+                    }
+
+                }
+            } else {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .fillMaxHeight(1F)
+                        .padding(innerPadding)
+                        .background(Color.Black.copy(alpha = 0.8f))
+                )
+            }
+        }
+    )
+}
+```
+### Create a Camera Screen
+```kotlin
+ fun CameraScreen(context: Any?) {
+CameraManagerUtils(context) { codeScanned ->
+            // Scan result    
+ }
+}
+
+```
+### Default Request Camera Permission
+```kotlin
+  RequestCameraPermission { granted ->
+        hasCameraPermission = granted
+    }
+
+```
+### Custom Request Camera Permission
+```kotlin
+  RequestCameraPermission(
+        titleDialogConfig = "Your app needs camera permission",
+        descriptionDialogConfig = "Your app needs camera permission to scan QR codes",
+        btnDialogConfig = "Open Settings",
+        titleDialogDenied = "Camera permission denied",
+        descriptionDialogDenied = "You need to grant camera permission to scan QR codes",
+        btnDialogDenied = "Grant Permission",
+        customDeniedDialog = {
+            //Your compose custom dialog
+        },
+        customSettingsDialog = {
+            //Your compose custom dialog
+        }
+    ) {granted-> 
+        println("CameraManagerUtils: $granted")
+    }
+
+```
+# Use in your Android Native App
+### Create CameraManager function
+```kotlin
+  @Composable
+fun CameraManagerUtils(
+    onCodeScanned: (String) -> Unit
+) {
+    val context = LocalContext.current
+    val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+    var hasCameraPermission by remember { mutableStateOf(false) }
+    val scanner: CodeScanner? by remember { mutableStateOf(null) }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            scanner?.stopScanning()
+        }
+    }
+
+    RequestCameraPermission { granted ->
+        hasCameraPermission = granted
+    }
+
+    Scaffold(
+        content = { innerPadding ->
+            if (hasCameraPermission) {
+                Box(
+                    modifier = Modifier
+                        .padding(innerPadding)
+                        .fillMaxSize()
+                ) {
+                    Box {
+                        var currentScanner by remember { mutableStateOf<CodeScanner?>(null) }
+                        CameraPreview(
+                            onPreviewViewReady = { preview ->
+                                currentScanner = createBelSpeedScanCodeScanner(
+                                    context = context,
+                                    lifecycleOwner = lifecycleOwner,
+                                    previewView = preview,
+                                    playSound = true,
+                                    resourceName = "sounds",
+                                    resourceExtension = "mp3",
+                                    delayToNextScan = 1000,
                                     onCodeScanned = { scannedText ->
                                         onCodeScanned(scannedText)
                                     }
@@ -148,8 +243,9 @@ fun CameraManagerUtils(
                             },
                             scanner = currentScanner,
                             modifier = Modifier.fillMaxHeight(1F),
-                            tooFarText = "Acerca el código a la cámara\nDistancia demasiado lejana",//Add your custom message o user default message just remove the tooFarText
-                            tooOptimalText = "¡Distancia perfecta!\nMantén el código dentro del marco",//Add your custom message o user default message just remove the tooOptimalText
+                            waterMark = "",
+                            tooFarText = "",
+                            tooOptimalText = "",
                         )
                     }
                 }
@@ -165,22 +261,16 @@ fun CameraManagerUtils(
         }
     )
 }
-// create a CameraScreen
-fun CameraScreen(context: Any?) {
-CameraManagerUtils(context) { codeScanned ->
-                if (codeScanned.isNotEmpty()) {
-                    if (scannedCodes.contains(codeScanned)) {
-                        alertManager.showAlert("Código duplicado: $codeScanned")
-                    } else {
-                        scannedCodes.add(codeScanned)
-                        alertManager.showAlert("Código escaneado: $codeScanned")
-                        coroutineScope.launch {
-                            bottomSheetState.expand()
-                        }
-                    }
-                }
-            }
+
+```
+### Create a Camera Screen
+```kotlin
+ fun CameraScreen() {
+  CameraManagerUtils() { codeScanned ->
+      // Scan Result                  
 }
+}
+
 ```
 ## Camera Permissions
 
