@@ -119,22 +119,26 @@ Scaffold(
                 ) {
                     Box {
                         var currentScanner by remember { mutableStateOf<CodeScanner?>(null) }
-                        CameraPreview(
+                       CameraPreview(
                             onPreviewViewReady = { preview ->
                                 currentScanner = createBelSpeedScanCodeScanner(
-                                    context = context,
-                                    lifecycleOwner = lifecycleOwner,
+                                    context = context,// only android
+                                    lifecycleOwner = lifecycleOwner,// only android
                                     previewView = preview,
-                                    playSound = true,
-                                    resourceName = "beep",
-                                    resourceExtension = "mp3",
-                                    delayToNextScan = 3000,
+                                    playSound = true,//active scan sound
+                                    resourceName = "sounds",//resource name for IOS android has a default sound
+                                    resourceExtension = "mp3",//resource extension for IOS android has a default sound
+                                    delayToNextScan = 1000,// Waiting time to next scan, default 2000
                                     onCodeScanned = { scannedText ->
                                         onCodeScanned(scannedText)
                                     },
-                                    onSecurityAlert = {securityAlertInfo->
+                                    onSecurityAlert = {securityAlertInfo ->
                                         securityAlertMessage = "${securityAlertInfo.message}\n${securityAlertInfo.codeValue}\nRazón: ${securityAlertInfo.reason}"
                                         securityAlertVisible = true
+                                    },
+                                    onCameraError = {error->
+                                     // manage the error
+                                        Log.e("ErrorCamera", error)
                                     }
                                 ).also {
                                     it.startScanning()
@@ -142,6 +146,13 @@ Scaffold(
                             },
                             scanner = currentScanner,
                             modifier = Modifier.fillMaxHeight(1F),
+                            waterMark = "",// waterMark = "" without watermark //  waterMark = "your brand" 
+                            tooFarText = "Acerca el código a la cámara\nDistancia demasiado lejana",
+                            tooOptimalText = "¡Distancia perfecta!\nMantén el código dentro del marco",
+                            tooCloseText = "",// take default text
+                            tooFarColor = Color.Red,
+                            tooOptimalColor = Color.Green,
+                            tooCloseColor = Color.Yellow,
                         )
                     }
                     if (securityAlertVisible) {
